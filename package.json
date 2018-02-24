@@ -1,7 +1,7 @@
 {
-  "name": "homebridge-mqtt-power-consumption",
-  "version": "0.0.2",
-  "description": "Homebridge plugin to get power consumption via mqtt",
+  "name": "homebridge-envoy",
+  "version": "0.0.1",
+  "description": "Homebridge plugin to get power stats from an Enlighten Envoy-S",
   "note": "peerDependencies is hardcoded to peerDepdendencies in homebridge!!!",
   "main": "index.js",
   "scripts": {
@@ -14,23 +14,24 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/goodfield/homebridge-mqtt-power-consumption.git"
+    "url": "git+https://github.com/zylantha/homebridge-envoy.git"
   },
   "keywords": [
     "homebridge-plugin",
-    "MQTT",
-    "Dimmer"
+    "envoy",
+    "enlighten",
+    "enphase"
   ],
   "dependencies": {
-    "mqtt": "^1.6.3"
+    "request-json": "^0.6.3"
   },
   "author": {
-    "name": "David Uebelacker"
+    "name": "Denis Cheong"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/goodfield/homebridge-mqtt-power-consumption/issues"
+    "url": "https://github.com/zylantha/homebridge-envoy/issues"
   },
-  "homepage": "https://github.com/goodfield/homebridge-mqtt-power-consumption",
+  "homepage": "https://github.com/zylantha/homebridge-envoy",
   "devDependencies": {}
 }
