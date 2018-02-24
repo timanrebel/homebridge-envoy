@@ -1,45 +1,29 @@
 'use strict';
 var inherits = require('util').inherits;
 var Service, Characteristic;
-var mqtt = require('mqtt');
 
 
+var request = require('request-json');
 
 module.exports = function (homebridge) {
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
 
-
-    homebridge.registerAccessory('homebridge-mqtt-power-consumption', 'mqtt-power-consumption', MqttPowerConsumptionAccessory);
+    homebridge.registerAccessory('homebridge-envoy', 'Envoy', envoy);
 };
 
-function MqttPowerConsumptionAccessory(log, config) {
-    this.log = log;
-    this.name = config['name'];
-    this.url = config['url'];
-    this.client_Id = 'mqttjs_' + Math.random().toString(16).substr(2, 8);
-    this.options = {
-        keepalive: 10,
-        clientId: this.client_Id,
-        protocolId: 'MQTT',
-        protocolVersion: 4,
-        clean: true,
-        reconnectPeriod: 1000,
-        connectTimeout: 30 * 1000,
-        will: {
-            topic: 'WillMsg',
-            payload: 'Connection Closed abnormally..!',
-            qos: 0,
-            retain: false
-        },
-        username: config['username'],
-        password: config['password'],
-        rejectUnauthorized: false
-    };
+var envoycache = new Array();
+var envoycachetime = new Array();
 
-    this.powerConsumption = 0;
-    this.totalPowerConsumption = 0;
-    this.topics = config['topics'];
+function envoy(log, config) {
+    this.log = log;
+    this.host = config['host'];
+    this.url = config['url'] || '/production.json';
+    this.refreshage = 1;
+    this.name = config['name'];
+
+    envoycache[this.host] = 0;
+    envoycachetime[this.host] = 0;
 
     var EvePowerConsumption = function() {
         Characteristic.call(this, 'Consumption', 'E863F10D-079E-48FF-8F27-9C2605A29F52');
@@ -77,42 +61,62 @@ function MqttPowerConsumptionAccessory(log, config) {
 
     inherits(PowerMeterService, Service);
 
-    this.service = new PowerMeterService(this.options['name']);
+    log(this.name);
+    this.service = new PowerMeterService(this.name);
     this.service.getCharacteristic(EvePowerConsumption).on('get', this.getPowerConsumption.bind(this));
     this.service.addCharacteristic(EveTotalPowerConsumption).on('get', this.getTotalPowerConsumption.bind(this));
 
-    this.client = mqtt.connect(this.url, this.options);
-
     var self = this;
 
-    this.client.on('error', function (err) {
-        self.log('Error event on MQTT:', err);
-    });
-
-    this.client.on('message', function (topic, message) {
-        if (topic == self.topics['power']) {
-            self.powerConsumption = parseFloat(message.toString());
-            self.service.getCharacteristic(EvePowerConsumption).setValue(self.powerConsumption, undefined, undefined);
-        }
-
-        if (topic == self.topics['totalPower']) {
-            self.totalPowerConsumption = parseFloat(message.toString());
-            self.service.getCharacteristic(EveTotalPowerConsumption).setValue(self.totalPowerConsumption, undefined, undefined);
-        }
-    });
-
-    this.client.subscribe(self.topics['power']);
-    this.client.subscribe(self.topics['totalPower']);
 }
 
-MqttPowerConsumptionAccessory.prototype.getPowerConsumption = function (callback) {
-    callback(null, this.powerConsumption);
+envoy.prototype.getstatus = function(callback) {
+    var curtime = new Date() / 1000;
+
+    if (curtime - envoycachetime[this.host] > this.refreshage) {
+        var client = request.createClient('http://' + this.host);
+
+//        console.log("Fetching " + this.host + this.url);
+
+        client.get(this.url, function(err, res, body) {
+           if (err) console.log("Error fetching data " + err);
+           else {
+               console.log('Fetched status.  Current production is ' + body.production[1].wNow.toFixed(0) + " watts, consumption is " + body.consumption[0].wNow.toFixed(0) + " watts");
+               envoycache[this.host] = body;
+               envoycachetime[this.host] = new Date() / 1000;
+               callback(envoycache[this.host]);
+               };
+           }.bind(this));
+    } else {
+//        console.log("Using cached details fetched " + (curtime - envoycachetime[this.host]).toFixed(0) + " seconds ago");
+        callback(this.status);
+        };
 };
 
-MqttPowerConsumptionAccessory.prototype.getTotalPowerConsumption = function (callback) {
-    callback(null, this.totalPowerConsumption);
+envoy.prototype.getPowerConsumption = function (callback) {
+    this.getstatus(function() {
+        switch (this.name) {
+            case "Production":  callback(null, envoycache[this.host].production[1].wNow.toFixed(0)); break;
+            case "Export":      callback(null, envoycache[this.host].consumption[1].wNow < 0 ? -envoycache[this.host].consumption[1].wNow.toFixed(0) : 0); break;
+            case "Import":      callback(null, envoycache[this.host].consumption[1].wNow > 0 ? envoycache[this.host].consumption[1].wNow.toFixed(0) : 0); break;
+            case "Consumption":
+            default:            callback(null, envoycache[this.host].consumption[0].wNow.toFixed(0)); break;
+            };
+        }.bind(this));
 };
 
-MqttPowerConsumptionAccessory.prototype.getServices = function () {
+envoy.prototype.getTotalPowerConsumption = function (callback) {
+    this.getstatus(function() {
+        switch (this.name) {
+            case "Production":  callback(null, envoycache[this.host].production[1].whToday / 1000); break;
+            case "Export":      callback(null, envoycache[this.host].consumption[1].whToday < 0 ? -envoyfetch[this.host].consumption[1].whToday / 1000 : 0); break;
+            case "Import":      callback(null, envoycache[this.host].consumption[1].whToday > 0 ? envoyfetch[this.host].consumption[1].whToday / 1000 : 0); break;
+            case "Consumption":
+            default:            callback(null, envoycache[this.host].consumption[0].whToday / 1000); break;
+            };
+       }.bind(this));
+};
+
+envoy.prototype.getServices = function () {
     return [this.service];
 };
