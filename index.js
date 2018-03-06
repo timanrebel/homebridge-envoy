@@ -25,6 +25,35 @@ function envoy(log, config) {
     envoycache[this.host] = 0;
     envoycachetime[this.host] = 0;
 
+	
+	var EveVoltage = function() {
+        Characteristic.call(this, 'Volt', 'E863F10A-079E-48FF-8F27-9C2605A29F52');
+        this.setProps({
+            format: Characteristic.Formats.UINT16,
+            unit: 'volts',
+            maxValue: 1000000000,
+            minValue: 0,
+            minStep: 1,
+            perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
+        });
+        this.value = this.getDefaultValue();
+    };
+    inherits(EveVoltage, Characteristic);
+
+	var EveCurrentFlow = function() {
+        Characteristic.call(this, 'Ampere', 'E863F126-079E-48FF-8F27-9C2605A29F52');
+        this.setProps({
+            format: Characteristic.Formats.UINT16,
+            unit: 'amps',
+            maxValue: 1000000000,
+            minValue: 0,
+            minStep: 1,
+            perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY]
+        });
+        this.value = this.getDefaultValue();
+    };
+    inherits(EveCurrentFlow, Characteristic);
+
     var EvePowerConsumption = function() {
         Characteristic.call(this, 'Consumption', 'E863F10D-079E-48FF-8F27-9C2605A29F52');
         this.setProps({
@@ -55,7 +84,9 @@ function envoy(log, config) {
 
     var PowerMeterService = function(displayName, subtype) {
         Service.call(this, displayName, '00000001-0000-1777-8000-775D67EC4377', subtype);
-        this.addCharacteristic(EvePowerConsumption);
+        this.addCharacteristic(EveVoltage);
+		this.addCharacteristic(EveCurrentFlow);
+		this.addCharacteristic(EvePowerConsumption);
         this.addOptionalCharacteristic(EveTotalPowerConsumption);
     };
 
@@ -63,8 +94,10 @@ function envoy(log, config) {
 
     log(this.name);
     this.service = new PowerMeterService(this.name);
+    this.service.getCharacteristic(EveVoltage).on('get', this.getVoltage.bind(this));
+    this.service.getCharacteristic(EveCurrentFlow).on('get', this.getCurrentFlow.bind(this));
     this.service.getCharacteristic(EvePowerConsumption).on('get', this.getPowerConsumption.bind(this));
-    this.service.addCharacteristic(EveTotalPowerConsumption).on('get', this.getTotalPowerConsumption.bind(this));
+	this.service.addCharacteristic(EveTotalPowerConsumption).on('get', this.getTotalPowerConsumption.bind(this));
 
     var self = this;
 
@@ -91,6 +124,38 @@ envoy.prototype.getstatus = function(callback) {
 //        console.log("Using cached details fetched " + (curtime - envoycachetime[this.host]).toFixed(0) + " seconds ago");
         callback(this.status);
         };
+};
+
+/*
+Manufacturer | 00000020-0000-1000-8000-0026BB765291 | X | | String(64) | HomeKit Standard
+Model | 00000021-0000-1000-8000-0026BB765291 | X | | String(64) | HomeKit Standard
+Serial Number | 00000030-0000-1000-8000-0026BB765291 | X | | String(64) | HomeKit Standard
+Identify | 00000014-0000-1000-8000-0026BB765291 | | X | Boolean | HomeKit Standard
+Firmware Revision | 00000052-0000-1000-8000-0026BB765291 | X | | String(64) | HomeKit Standard Outlet | 00000047-0000-1000-8000-0026BB765291 | - | - | | HomeKit Standard
+*/
+
+envoy.prototype.getCurrentFlow = function (callback) {
+    this.getstatus(function() {
+        switch (this.name) {
+            case "Production":  callback(null, envoycache[this.host].production[1].rmsCurrent); break;
+            case "Export":      callback(null, envoycache[this.host].consumption[1].rmsCurrent < 0 ? -envoycache[this.host].consumption[1].rmsCurrent : 0); break;
+            case "Import":      callback(null, envoycache[this.host].consumption[1].rmsCurrent > 0 ? envoycache[this.host].consumption[1].rmsCurrent : 0); break;
+            case "Consumption":
+            default:            callback(null, envoycache[this.host].consumption[0].rmsCurrent); break;
+            };
+        }.bind(this));
+};
+
+envoy.prototype.getVoltage = function (callback) {
+    this.getstatus(function() {
+        switch (this.name) {
+            case "Production":  callback(null, envoycache[this.host].production[1].rmsVoltage); break;
+            case "Export":      callback(null, envoycache[this.host].consumption[1].rmsVoltage < 0 ? -envoycache[this.host].consumption[1].rmsVoltage : 0); break;
+            case "Import":      callback(null, envoycache[this.host].consumption[1].rmsVoltage > 0 ? envoycache[this.host].consumption[1].rmsVoltage : 0); break;
+            case "Consumption":
+            default:            callback(null, envoycache[this.host].consumption[0].rmsVoltage); break;
+            };
+        }.bind(this));
 };
 
 envoy.prototype.getPowerConsumption = function (callback) {
