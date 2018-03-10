@@ -84,9 +84,9 @@ function envoy(log, config) {
 
     var PowerMeterService = function(displayName, subtype) {
         Service.call(this, displayName, '00000001-0000-1777-8000-775D67EC4377', subtype);
-        this.addCharacteristic(EveVoltage);
-		this.addCharacteristic(EveCurrentFlow);
 		this.addCharacteristic(EvePowerConsumption);
+		this.addCharacteristic(EveCurrentFlow);
+        this.addCharacteristic(EveVoltage);
         this.addOptionalCharacteristic(EveTotalPowerConsumption);
     };
 
@@ -94,9 +94,9 @@ function envoy(log, config) {
 
     log(this.name);
     this.service = new PowerMeterService(this.name);
-    this.service.getCharacteristic(EveVoltage).on('get', this.getVoltage.bind(this));
-    this.service.getCharacteristic(EveCurrentFlow).on('get', this.getCurrentFlow.bind(this));
     this.service.getCharacteristic(EvePowerConsumption).on('get', this.getPowerConsumption.bind(this));
+    this.service.getCharacteristic(EveCurrentFlow).on('get', this.getCurrentFlow.bind(this));
+    this.service.getCharacteristic(EveVoltage).on('get', this.getVoltage.bind(this));
 	this.service.addCharacteristic(EveTotalPowerConsumption).on('get', this.getTotalPowerConsumption.bind(this));
 
     var self = this;
