@@ -114,7 +114,8 @@ envoy.prototype.getstatus = function(callback) {
         client.get(this.url, function(err, res, body) {
            if (err) console.log("Error fetching data " + err);
            else {
-               console.log('Fetched status.  Current production is ' + body.production[1].wNow.toFixed(0) + " watts, consumption is " + body.consumption[0].wNow.toFixed(0) + " watts");
+               console.log('Fetched status.  Current production is ' + body.production[1].wNow.toFixed(0) + " watts:);
+	       //console.log('Current consumption is " + body.consumption[0].wNow.toFixed(0) + " watts");
                envoycache[this.host] = body;
                envoycachetime[this.host] = new Date() / 1000;
                callback(envoycache[this.host]);
