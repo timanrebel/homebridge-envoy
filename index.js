@@ -114,7 +114,7 @@ envoy.prototype.getstatus = function(callback) {
         client.get(this.url, function(err, res, body) {
            if (err) console.log("Error fetching data " + err);
            else {
-               console.log('Fetched status.  Current production is ' + body.production[1].wNow.toFixed(0) + ' watts');
+               console.log('Fetched status.  Current production is ' + body.production[0].wNow.toFixed(0) + ' watts');
 	       //console.log('Current consumption is " + body.consumption[0].wNow.toFixed(0) + " watts");
                envoycache[this.host] = body;
                envoycachetime[this.host] = new Date() / 1000;
@@ -138,7 +138,7 @@ Firmware Revision | 00000052-0000-1000-8000-0026BB765291 | X | | String(64) | Ho
 envoy.prototype.getCurrentFlow = function (callback) {
     this.getstatus(function() {
         switch (this.name) {
-            case "Production":  callback(null, envoycache[this.host].production[1].rmsCurrent); break;
+            case "Production":  callback(null, envoycache[this.host].production[0].rmsCurrent); break;
             case "Export":      callback(null, envoycache[this.host].consumption[1].rmsCurrent < 0 ? -envoycache[this.host].consumption[1].rmsCurrent : 0); break;
             case "Import":      callback(null, envoycache[this.host].consumption[1].rmsCurrent > 0 ? envoycache[this.host].consumption[1].rmsCurrent : 0); break;
             case "Consumption":
@@ -150,7 +150,7 @@ envoy.prototype.getCurrentFlow = function (callback) {
 envoy.prototype.getVoltage = function (callback) {
     this.getstatus(function() {
         switch (this.name) {
-            case "Production":  callback(null, envoycache[this.host].production[1].rmsVoltage); break;
+            case "Production":  callback(null, envoycache[this.host].production[0].rmsVoltage); break;
             case "Export":      callback(null, envoycache[this.host].consumption[1].rmsVoltage < 0 ? -envoycache[this.host].consumption[1].rmsVoltage : 0); break;
             case "Import":      callback(null, envoycache[this.host].consumption[1].rmsVoltage > 0 ? envoycache[this.host].consumption[1].rmsVoltage : 0); break;
             case "Consumption":
@@ -162,7 +162,7 @@ envoy.prototype.getVoltage = function (callback) {
 envoy.prototype.getPowerConsumption = function (callback) {
     this.getstatus(function() {
         switch (this.name) {
-            case "Production":  callback(null, envoycache[this.host].production[1].wNow.toFixed(0)); break;
+            case "Production":  callback(null, envoycache[this.host].production[0].wNow.toFixed(0)); break;
             case "Export":      callback(null, envoycache[this.host].consumption[1].wNow < 0 ? -envoycache[this.host].consumption[1].wNow.toFixed(0) : 0); break;
             case "Import":      callback(null, envoycache[this.host].consumption[1].wNow > 0 ? envoycache[this.host].consumption[1].wNow.toFixed(0) : 0); break;
             case "Consumption":
@@ -174,7 +174,7 @@ envoy.prototype.getPowerConsumption = function (callback) {
 envoy.prototype.getTotalPowerConsumption = function (callback) {
     this.getstatus(function() {
         switch (this.name) {
-            case "Production":  callback(null, envoycache[this.host].production[1].whToday / 1000); break;
+            case "Production":  callback(null, envoycache[this.host].production[0].whToday / 1000); break;
             case "Export":      callback(null, envoycache[this.host].consumption[1].whToday < 0 ? -envoyfetch[this.host].consumption[1].whToday / 1000 : 0); break;
             case "Import":      callback(null, envoycache[this.host].consumption[1].whToday > 0 ? envoyfetch[this.host].consumption[1].whToday / 1000 : 0); break;
             case "Consumption":
